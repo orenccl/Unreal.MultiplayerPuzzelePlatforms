@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "MovingPlatform.h"
 
 AMovingPlatform::AMovingPlatform()
@@ -12,23 +10,64 @@ void AMovingPlatform::BeginPlay()
 {
     Super::BeginPlay();
 
-    if (HasAuthority())
+    // Only work on server
+    if (HasAuthority() == false)
     {
-        SetReplicates(true);
-        SetReplicateMovement(true);
+        return;
     }
+
+    // Init value
+    GlobalStartLocation = GetActorLocation();
+    GlobalTargetLocation = GetTransform().TransformPosition(TargetLocation);
+
+    // Init setting
+    SetReplicates(true);
+    SetReplicateMovement(true);
 }
 
 void AMovingPlatform::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    if (HasAuthority())
+    // Only work on server
+    if (HasAuthority() == false)
     {
-        FVector Location = GetActorLocation();
-        FVector GlobalTargetLocation = GetTransform().TransformPosition(TargetLocation);
-        FVector Direction = (GlobalTargetLocation - Location).GetSafeNormal();
-        Location += Direction * Speed * DeltaTime;
-        SetActorLocation(Location);
+        return;
     }
+
+    // Only moving when ActiveTriggers > 0
+    if (ActiveTriggers == 0)
+    {
+        return;
+    }
+
+    FVector CurrentLocation = GetActorLocation();
+
+    // Swap start and target if reached
+    float JourneyLength = (GlobalTargetLocation - GlobalStartLocation).Size();
+    float JourneyTravelled = (CurrentLocation - GlobalStartLocation).Size();
+    if (JourneyTravelled >= JourneyLength)
+    {
+        Swap<FVector>(GlobalStartLocation, GlobalTargetLocation);
+    }
+
+    // Calculate direction and set new location
+    FVector JourneyDirection = (GlobalTargetLocation - GlobalStartLocation).GetSafeNormal();
+    SetActorLocation(CurrentLocation + JourneyDirection * Speed * DeltaTime);
+}
+
+void AMovingPlatform::AddActiveTrigger()
+{
+    ActiveTriggers++;
+}
+
+void AMovingPlatform::RemoveActiveTrigger()
+{
+    // Prevent negative
+    if (ActiveTriggers == 0)
+    {
+        return;
+    }
+
+    ActiveTriggers--;
 }
