@@ -30,9 +30,8 @@ void APlatformTrigger::BeginPlay()
 	Super::BeginPlay();
 
 	if (!ensure(TriggerVolume != nullptr))
-	{
 		return;
-	}
+
 	// Init overlap event
 	TriggerVolume->OnComponentBeginOverlap.AddDynamic(this, &APlatformTrigger::OnBeginOverlap);
 	TriggerVolume->OnComponentEndOverlap.AddDynamic(this, &APlatformTrigger::OnEndOverlap);
