@@ -3,6 +3,7 @@
 AMovingPlatform::AMovingPlatform()
 {
     PrimaryActorTick.bCanEverTick = true;
+    // Moving platform should always be Movable
     SetMobility(EComponentMobility::Movable);
 }
 
@@ -10,7 +11,7 @@ void AMovingPlatform::BeginPlay()
 {
     Super::BeginPlay();
 
-    // Only work on server
+    // If not server
     if (HasAuthority() == false)
     {
         return;
@@ -20,7 +21,7 @@ void AMovingPlatform::BeginPlay()
     GlobalStartLocation = GetActorLocation();
     GlobalTargetLocation = GetTransform().TransformPosition(TargetLocation);
 
-    // Init setting
+    // Set replicate setting
     SetReplicates(true);
     SetReplicateMovement(true);
 }
@@ -29,13 +30,13 @@ void AMovingPlatform::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    // Only work on server
+    // If not server
     if (HasAuthority() == false)
     {
         return;
     }
 
-    // Only moving when ActiveTriggers > 0
+    // If has no ActiveTrigger
     if (ActiveTriggers == 0)
     {
         return;
@@ -43,7 +44,7 @@ void AMovingPlatform::Tick(float DeltaTime)
 
     FVector CurrentLocation = GetActorLocation();
 
-    // Swap start and target if reached
+    // Swap start and target if reached target
     float JourneyLength = (GlobalTargetLocation - GlobalStartLocation).Size();
     float JourneyTravelled = (CurrentLocation - GlobalStartLocation).Size();
     if (JourneyTravelled >= JourneyLength)
@@ -51,8 +52,9 @@ void AMovingPlatform::Tick(float DeltaTime)
         Swap<FVector>(GlobalStartLocation, GlobalTargetLocation);
     }
 
-    // Calculate direction and set new location
+    // Calculate direction
     FVector JourneyDirection = (GlobalTargetLocation - GlobalStartLocation).GetSafeNormal();
+    // Set new location
     SetActorLocation(CurrentLocation + JourneyDirection * Speed * DeltaTime);
 }
 
@@ -63,7 +65,7 @@ void AMovingPlatform::AddActiveTrigger()
 
 void AMovingPlatform::RemoveActiveTrigger()
 {
-    // Prevent negative
+    // Prevent negative number
     if (ActiveTriggers == 0)
     {
         return;

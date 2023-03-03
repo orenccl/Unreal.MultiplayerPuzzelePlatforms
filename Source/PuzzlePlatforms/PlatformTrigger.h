@@ -8,6 +8,9 @@
 
 class AMovingPlatform;
 
+/**
+ * Trigger MovingPlatform to move.
+ */
 UCLASS()
 class PUZZLEPLATFORMS_API APlatformTrigger : public AActor
 {
@@ -21,17 +24,16 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-public:
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
 private:
+	/** Trigger area */
 	UPROPERTY(VisibleAnywhere)
 	class UBoxComponent *TriggerVolume;
 
+	/** Trigger's visual identification */
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent *PressurePad;
 
+	/** MovingPlatform list that goint to trigger*/
 	UPROPERTY(EditAnywhere)
 	TArray<AMovingPlatform *> PlatformsToTrigger;
 

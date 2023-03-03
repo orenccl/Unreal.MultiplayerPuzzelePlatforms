@@ -13,14 +13,21 @@ class UMenuInterface : public UInterface
 	GENERATED_BODY()
 };
 
+/**
+ * Use this interface to injecting dependencies
+ * Implement this interface if you want to use Menu System
+ */
 class PUZZLEPLATFORMS_API IMenuInterface
 {
 	GENERATED_BODY()
 
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
-	// Pure virtual, empty implementation
+	/** Host a server */
 	virtual void Host() = 0;
 
+	/** Join a server */
 	virtual void Join(const FString &Address) = 0;
+
+	virtual void LoadMainMenuMap() = 0;
 };

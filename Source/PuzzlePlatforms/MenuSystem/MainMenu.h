@@ -4,31 +4,50 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "MenuWidget.h"
 #include "MainMenu.generated.h"
 
 class UButton;
+class UWidgetSwitcher;
+class UWidget;
+class UEditableTextBox;
 class IMenuInterface;
 
 UCLASS()
-class PUZZLEPLATFORMS_API UMainMenu : public UUserWidget
+class PUZZLEPLATFORMS_API UMainMenu : public UMenuWidget
 {
 	GENERATED_BODY()
 
-public:
+protected:
 	virtual bool Initialize() override;
-
-	void SetMenuInterface(IMenuInterface *Interface);
-
-	void Setup();
-
-	void Teardown();
 
 private:
 	UPROPERTY(meta = (BindWidget))
-	UButton *Host;
+	UWidget *MainMenu;
 
 	UPROPERTY(meta = (BindWidget))
-	UButton *Join;
+	UWidget *JoinMenu;
+
+	UPROPERTY(meta = (BindWidget))
+	UWidgetSwitcher *MenuSwitcher;
+
+	UPROPERTY(meta = (BindWidget))
+	UButton *HostButton;
+
+	UPROPERTY(meta = (BindWidget))
+	UButton *JoinButton;
+
+	UPROPERTY(meta = (BindWidget))
+	UButton *QuitButton;
+
+	UPROPERTY(meta = (BindWidget))
+	UButton *CancelJoinMenuButton;
+
+	UPROPERTY(meta = (BindWidget))
+	UButton *ConfirmJoinMenuButton;
+
+	UPROPERTY(meta = (BindWidget))
+	UEditableTextBox *IPAddressField;
 
 	UFUNCTION()
 	void HostServer();
@@ -36,5 +55,12 @@ private:
 	UFUNCTION()
 	void JoinServer();
 
-	IMenuInterface *MenuInterface;
+	UFUNCTION()
+	void OpenMainMenu();
+
+	UFUNCTION()
+	void OpenJoinMenu();
+
+	UFUNCTION()
+	void QuitGame();
 };

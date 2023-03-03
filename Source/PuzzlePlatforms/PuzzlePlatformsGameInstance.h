@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -8,6 +6,8 @@
 #include "PuzzlePlatformsGameInstance.generated.h"
 
 class UMainMenu;
+class UInGameMenu;
+
 UCLASS()
 class PUZZLEPLATFORMS_API UPuzzlePlatformsGameInstance : public UGameInstance, public IMenuInterface
 {
@@ -16,10 +16,13 @@ class PUZZLEPLATFORMS_API UPuzzlePlatformsGameInstance : public UGameInstance, p
 public:
 	UPuzzlePlatformsGameInstance(const FObjectInitializer &ObjectInitializer);
 
-	virtual void Init() override;
+	virtual void LoadMainMenuMap() override;
 
 	UFUNCTION(BlueprintCallable)
-	void LoadMenu();
+	void LoadMainMenu();
+
+	UFUNCTION(BlueprintCallable)
+	void LoadInGameMenu();
 
 	UFUNCTION(Exec)
 	virtual void Host() override;
@@ -29,6 +32,7 @@ public:
 
 private:
 	TSubclassOf<UUserWidget> MainMenuClass;
+	UMainMenu *Menu;
 
-	UMainMenu *MainMenu;
+	TSubclassOf<UUserWidget> InGameMenuClass;
 };

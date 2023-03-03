@@ -7,7 +7,8 @@
 #include "MovingPlatform.generated.h"
 
 /**
- *
+ * Moving from start to target location, back and forth.
+ * Only update position from server.
  */
 UCLASS()
 class PUZZLEPLATFORMS_API AMovingPlatform : public AStaticMeshActor
@@ -31,13 +32,13 @@ public:
 	void RemoveActiveTrigger();
 
 private:
+	/** If no active triggger, platform will stop */
 	UPROPERTY(EditAnywhere)
 	int ActiveTriggers = 1;
-
+	/** Moving speed */
 	UPROPERTY(EditAnywhere)
 	float Speed = 75;
-
-	// relative
+	/** Relative target location */
 	UPROPERTY(EditAnywhere, Meta = (MakeEditWidget = true))
 	FVector TargetLocation;
 

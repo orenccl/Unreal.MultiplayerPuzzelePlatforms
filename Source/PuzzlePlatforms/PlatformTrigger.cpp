@@ -10,17 +10,17 @@ APlatformTrigger::APlatformTrigger()
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	// Init basic component
+	// Create overlap component
 	TriggerVolume = CreateDefaultSubobject<UBoxComponent>(TEXT("Trigger Volume"));
 	if (!ensure(TriggerVolume != nullptr))
 		return;
-
+	// Replace root
 	RootComponent = TriggerVolume;
 
+	// Create visual component
 	PressurePad = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Pressure Pad"));
 	if (!ensure(PressurePad != nullptr))
 		return;
-
 	PressurePad->SetupAttachment(RootComponent);
 }
 
@@ -32,19 +32,14 @@ void APlatformTrigger::BeginPlay()
 	if (!ensure(TriggerVolume != nullptr))
 		return;
 
-	// Init overlap event
+	// Bind overlap event
 	TriggerVolume->OnComponentBeginOverlap.AddDynamic(this, &APlatformTrigger::OnBeginOverlap);
 	TriggerVolume->OnComponentEndOverlap.AddDynamic(this, &APlatformTrigger::OnEndOverlap);
 }
 
-// Called every frame
-void APlatformTrigger::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-}
-
 void APlatformTrigger::OnBeginOverlap(UPrimitiveComponent *OverlappedComp, AActor *Other, UPrimitiveComponent *OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult)
 {
+	// Active all MovingPlatform in list
 	for (AMovingPlatform *Platform : PlatformsToTrigger)
 	{
 		Platform->AddActiveTrigger();
@@ -53,6 +48,7 @@ void APlatformTrigger::OnBeginOverlap(UPrimitiveComponent *OverlappedComp, AActo
 
 void APlatformTrigger::OnEndOverlap(UPrimitiveComponent *OverlappedComp, AActor *Other, UPrimitiveComponent *OtherComp, int32 OtherBodyIndex)
 {
+	// Deactive all MovingPlatform in list
 	for (AMovingPlatform *Platform : PlatformsToTrigger)
 	{
 		Platform->RemoveActiveTrigger();
