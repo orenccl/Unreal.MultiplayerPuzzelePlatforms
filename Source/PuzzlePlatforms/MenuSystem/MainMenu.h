@@ -24,6 +24,8 @@ public:
 
 	void SetServerList(TArray<FString> ServerNames);
 
+	void SelectIndex(uint32 Index);
+
 protected:
 	virtual bool Initialize() override;
 
@@ -56,6 +58,8 @@ private:
 	UPanelWidget *ServerList;
 
 	TSubclassOf<UUserWidget> ServerRowClass;
+
+	TOptional<uint32> SelectedIndex;
 
 	UFUNCTION()
 	void HostServer();

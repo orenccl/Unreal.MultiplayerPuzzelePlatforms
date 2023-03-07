@@ -5,7 +5,6 @@
 #include "Engine/Engine.h"
 #include "Blueprint/UserWidget.h"
 #include "OnlineSessionSettings.h"
-#include "Interfaces/OnlineSessionInterface.h"
 
 #include "MenuSystem/MainMenu.h"
 #include "MenuSystem/MenuWidget.h"
@@ -17,17 +16,15 @@ UPuzzlePlatformsGameInstance::UPuzzlePlatformsGameInstance(const FObjectInitiali
     // Find main menu widget BP classes
     static ConstructorHelpers::FClassFinder<UUserWidget> MainMenuBPClass(TEXT("/Game/MenuSystem/WBP_MainMenu"));
     if (!ensure(MainMenuBPClass.Class != nullptr))
-    {
         return;
-    }
+
     MainMenuClass = MainMenuBPClass.Class;
 
     // Find in game widget BP classes
     static ConstructorHelpers::FClassFinder<UUserWidget> InGameMenuBPClass(TEXT("/Game/MenuSystem/WBP_InGameMenu"));
     if (!ensure(InGameMenuBPClass.Class != nullptr))
-    {
         return;
-    }
+
     InGameMenuClass = InGameMenuBPClass.Class;
 }
 
@@ -54,16 +51,15 @@ void UPuzzlePlatformsGameInstance::Init()
 
     // Bind session delegates
     SessionInterface->OnCreateSessionCompleteDelegates.AddUObject(this, &UPuzzlePlatformsGameInstance::OnCreateSessionComplete);
-    SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &UPuzzlePlatformsGameInstance::OnDestroySessionComplete);
     SessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &UPuzzlePlatformsGameInstance::OnFindSessionsComplete);
+    SessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &UPuzzlePlatformsGameInstance::OnJoinSessionComplete);
+    SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &UPuzzlePlatformsGameInstance::OnDestroySessionComplete);
 }
 
 void UPuzzlePlatformsGameInstance::RefreshServerList()
 {
     if (!SessionInterface.IsValid())
-    {
         return;
-    };
 
     SessionSearch = MakeShareable(new FOnlineSessionSearch());
     if (!SessionSearch.IsValid())
@@ -72,7 +68,11 @@ void UPuzzlePlatformsGameInstance::RefreshServerList()
     }
 
     UE_LOG(LogTemp, Warning, TEXT("Starting find session"));
+
+    // TODO: bIsLANMatch set to false for steam connect
     SessionSearch->bIsLanQuery = true;
+    SessionSearch->MaxSearchResults = 100;
+    SessionSearch->QuerySettings.Set(SEARCH_PRESENCE, true, EOnlineComparisonOp::Equals);
     SessionInterface->FindSessions(0, SessionSearch.ToSharedRef());
 }
 
@@ -119,9 +119,7 @@ void UPuzzlePlatformsGameInstance::LoadInGameMenu()
 void UPuzzlePlatformsGameInstance::Host()
 {
     if (!SessionInterface.IsValid())
-    {
         return;
-    };
 
     // If already exist then destroy
     FNamedOnlineSession *ExistingSession = SessionInterface->GetNamedSession(SESSION_NAME);
@@ -136,38 +134,38 @@ void UPuzzlePlatformsGameInstance::Host()
     }
 }
 
-void UPuzzlePlatformsGameInstance::Join(const FString &Address)
+void UPuzzlePlatformsGameInstance::Join(uint32 Index)
 {
-    if (!SessionInterface.IsValid())
-    {
-        return;
-    };
-
-    UEngine *Engine = GetEngine();
-    if (!ensure(Engine != nullptr))
-        return;
-
-    Engine->AddOnScreenDebugMessage(0, 2, FColor::Green, TEXT("Join Server..."));
-
+    // TODO: Disable this block for steam connect
     APlayerController *PlayerController = GetFirstLocalPlayerController();
     if (!ensure(PlayerController != nullptr))
         return;
+    PlayerController->ClientTravel("192.168.0.202", ETravelType::TRAVEL_Absolute);
+    return;
+    // TODO: Disable this block for steam connect
 
-    // Join server by IP address
-    PlayerController->ClientTravel(Address, ETravelType::TRAVEL_Absolute);
+    if (!SessionInterface.IsValid())
+        return;
+
+    if (!SessionSearch.IsValid())
+        return;
+
+    SessionInterface->JoinSession(0, SESSION_NAME, SessionSearch->SearchResults[Index]);
 }
 
 void UPuzzlePlatformsGameInstance::CreateSession()
 {
     if (!SessionInterface.IsValid())
-    {
         return;
-    };
 
     FOnlineSessionSettings SessionSettings;
+    // TODO: bIsLANMatch set to false for steam connect
     SessionSettings.bIsLANMatch = true;
     SessionSettings.NumPublicConnections = 2;
     SessionSettings.bShouldAdvertise = true;
+    // Set these two option true for steam to work properly
+    SessionSettings.bUsesPresence = true;
+    SessionSettings.bUseLobbiesIfAvailable = true;
 
     SessionInterface->CreateSession(0, SESSION_NAME, SessionSettings);
 }
@@ -205,6 +203,10 @@ void UPuzzlePlatformsGameInstance::OnFindSessionsComplete(bool Success)
         return;
 
     TArray<FString> ServerNames;
+    // TODO: Text Message
+    ServerNames.Add("Test Server 1");
+    ServerNames.Add("Test Server 2");
+    ServerNames.Add("Test Server 3");
     TArray<FOnlineSessionSearchResult> Results = SessionSearch->SearchResults;
     for (const FOnlineSessionSearchResult &Result : Results)
     {
@@ -214,12 +216,43 @@ void UPuzzlePlatformsGameInstance::OnFindSessionsComplete(bool Success)
     Menu->SetServerList(ServerNames);
 }
 
+void UPuzzlePlatformsGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result)
+{
+    if (Result != EOnJoinSessionCompleteResult::Success)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Join fail"));
+        return;
+    }
+
+    if (!SessionInterface.IsValid())
+        return;
+
+    // Parse server IP Adress
+    FString Address;
+    if (!SessionInterface->GetResolvedConnectString(SessionName, Address))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Could not get GetResolvedConnectString"));
+        return;
+    }
+
+    UEngine *Engine = GetEngine();
+    if (!ensure(Engine != nullptr))
+        return;
+
+    Engine->AddOnScreenDebugMessage(0, 2, FColor::Green, FString::Printf(TEXT("Join Server... %s"), *Address));
+
+    APlayerController *PlayerController = GetFirstLocalPlayerController();
+    if (!ensure(PlayerController != nullptr))
+        return;
+
+    // Join server by IP address
+    PlayerController->ClientTravel(Address, ETravelType::TRAVEL_Absolute);
+}
+
 void UPuzzlePlatformsGameInstance::OnDestroySessionComplete(FName SessionName, bool Success)
 {
     if (!Success)
-    {
         return;
-    }
 
     // Recreate session after successfully destroy it
     CreateSession();

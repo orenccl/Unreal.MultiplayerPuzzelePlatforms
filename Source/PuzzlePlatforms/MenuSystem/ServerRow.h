@@ -7,6 +7,8 @@
 #include "ServerRow.generated.h"
 
 class UTextBlock;
+class UMainMenu;
+class UButton;
 
 /**
  * Child of ServerList
@@ -19,4 +21,18 @@ class PUZZLEPLATFORMS_API UServerRow : public UUserWidget
 public:
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock *ServerName;
+
+	UPROPERTY(meta = (BindWidget))
+	UButton *RowButton;
+
+	void Setup(UMainMenu *Parent, uint32 Index);
+
+private:
+	UFUNCTION()
+	void OnClicked();
+
+	UPROPERTY()
+	UMainMenu *Parent;
+
+	uint32 Index;
 };
