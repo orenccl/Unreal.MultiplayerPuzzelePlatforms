@@ -152,7 +152,7 @@ void UPuzzlePlatformsGameInstance::CreateSession()
 
     FOnlineSessionSettings SessionSettings;
     SessionSettings.bIsLANMatch = IOnlineSubsystem::Get()->GetSubsystemName() == "NULL";
-    SessionSettings.NumPublicConnections = 2;
+    SessionSettings.NumPublicConnections = 3;
     SessionSettings.bShouldAdvertise = true;
     // Set both steaem and local can use
     SessionSettings.Set(SERVER_NAME_KEY, DesiredServerName, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
@@ -182,7 +182,7 @@ void UPuzzlePlatformsGameInstance::OnCreateSessionComplete(FName SessionName, bo
         return;
 
     // If game is already server, also bring all child to new server together.
-    World->ServerTravel("/Game/ThirdPerson/Maps/ThirdPersonMap?listen");
+    World->ServerTravel("/Game/PuzzlePlatforms/Maps/Lobby?listen");
 }
 
 void UPuzzlePlatformsGameInstance::OnFindSessionsComplete(bool Success)
