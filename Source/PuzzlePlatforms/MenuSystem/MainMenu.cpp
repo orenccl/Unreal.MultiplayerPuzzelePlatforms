@@ -5,6 +5,7 @@
 #include "Components/WidgetSwitcher.h"
 #include "Components/EditableTextBox.h"
 #include "Components/TextBlock.h"
+#include "Components/EditableTextBox.h"
 #include "ServerRow.h"
 #include "MenuInterface.h"
 
@@ -30,12 +31,22 @@ bool UMainMenu::Initialize()
     // Setup
     if (ensure(HostButton != nullptr))
     {
-        HostButton->OnClicked.AddDynamic(this, &UMainMenu::HostServer);
+        HostButton->OnClicked.AddDynamic(this, &UMainMenu::OpenHostMenu);
     }
 
     if (ensure(JoinButton != nullptr))
     {
         JoinButton->OnClicked.AddDynamic(this, &UMainMenu::OpenJoinMenu);
+    }
+
+    if (ensure(CancelHostMenuButton != nullptr))
+    {
+        CancelHostMenuButton->OnClicked.AddDynamic(this, &UMainMenu::OpenMainMenu);
+    }
+
+    if (ensure(ConfirmHostMenuButton != nullptr))
+    {
+        ConfirmHostMenuButton->OnClicked.AddDynamic(this, &UMainMenu::HostServer);
     }
 
     if (ensure(CancelJoinMenuButton != nullptr))
@@ -61,10 +72,13 @@ void UMainMenu::HostServer()
     if (!ensure(MenuInterface != nullptr))
         return;
 
-    MenuInterface->Host();
+    if (!ensure(ServerName != nullptr))
+        return;
+
+    MenuInterface->Host(ServerName->GetText().ToString());
 }
 
-void UMainMenu::SetServerList(TArray<FString> ServerNames)
+void UMainMenu::SetServerList(TArray<FServerData> ServerDatas)
 {
     if (!ensure(ServerRowClass != nullptr))
         return;
@@ -75,14 +89,16 @@ void UMainMenu::SetServerList(TArray<FString> ServerNames)
     // Clear old serverRow
     ServerList->ClearChildren();
 
-    for (size_t i = 0; i < ServerNames.Num(); i++)
+    for (size_t i = 0; i < ServerDatas.Num(); i++)
     {
         UServerRow *ServerRow = CreateWidget<UServerRow>(this, ServerRowClass);
         if (!ensure(ServerRow != nullptr))
             return;
 
         ServerRow->Setup(this, i);
-        ServerRow->ServerName->SetText(FText::FromString(ServerNames[i]));
+        ServerRow->ServerName->SetText(FText::FromString(ServerDatas[i].Name));
+        ServerRow->HostUser->SetText(FText::FromString(ServerDatas[i].HostUserName));
+        ServerRow->ConnectionFraction->SetText(FText::FromString(FString::Printf(TEXT("%d/%d"), ServerDatas[i].CurrentPlayers, ServerDatas[i].MaxPlayers)));
         ServerList->AddChild(ServerRow);
     }
 }
@@ -90,6 +106,7 @@ void UMainMenu::SetServerList(TArray<FString> ServerNames)
 void UMainMenu::SelectIndex(uint32 Index)
 {
     SelectedIndex = Index;
+    UpdateServerListChildren();
 }
 
 void UMainMenu::JoinServer()
@@ -115,6 +132,17 @@ void UMainMenu::OpenMainMenu()
         return;
 
     MenuSwitcher->SetActiveWidget(MainMenu);
+}
+
+void UMainMenu::OpenHostMenu()
+{
+    if (!ensure(MenuSwitcher != nullptr))
+        return;
+
+    if (!ensure(HostMenu != nullptr))
+        return;
+
+    MenuSwitcher->SetActiveWidget(HostMenu);
 }
 
 void UMainMenu::OpenJoinMenu()
@@ -144,4 +172,18 @@ void UMainMenu::QuitGame()
         return;
 
     PlayerController->ConsoleCommand(TEXT("quit"), false);
+}
+
+void UMainMenu::UpdateServerListChildren()
+{
+    for (size_t i = 0; i < ServerList->GetChildrenCount(); i++)
+    {
+        UServerRow *ServerRow = Cast<UServerRow>(ServerList->GetChildAt(i));
+        if (!ServerRow)
+        {
+            continue;
+        }
+
+        ServerRow->Selected = SelectedIndex.IsSet() && SelectedIndex.GetValue() == i;
+    }
 }

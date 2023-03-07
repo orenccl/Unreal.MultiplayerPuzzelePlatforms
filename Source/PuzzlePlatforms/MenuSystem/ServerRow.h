@@ -23,7 +23,16 @@ public:
 	UTextBlock *ServerName;
 
 	UPROPERTY(meta = (BindWidget))
+	UTextBlock *HostUser;
+
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock *ConnectionFraction;
+
+	UPROPERTY(meta = (BindWidget))
 	UButton *RowButton;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool Selected = false;
 
 	void Setup(UMainMenu *Parent, uint32 Index);
 

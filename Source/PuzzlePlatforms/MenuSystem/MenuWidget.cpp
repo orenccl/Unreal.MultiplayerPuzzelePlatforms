@@ -36,16 +36,15 @@ void UMenuWidget::NativeDestruct()
 {
     Super::NativeDestruct();
 
-    RemoveFromParent();
-
     UWorld *World = GetWorld();
-    if (!ensure(World != nullptr))
+    if (!World)
         return;
 
     APlayerController *PlayerController = World->GetFirstPlayerController();
-    if (!ensure(PlayerController != nullptr))
+    if (!PlayerController)
         return;
 
+    RemoveFromParent();
     // InputMode change back to FInputModeGameOnly, not interact with UI anymore
     FInputModeGameOnly InputModeData;
     PlayerController->SetInputMode(InputModeData);

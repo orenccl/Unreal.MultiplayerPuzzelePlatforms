@@ -9,7 +9,8 @@
 #include "MenuSystem/MainMenu.h"
 #include "MenuSystem/MenuWidget.h"
 
-const static FName SESSION_NAME = TEXT("Session Game");
+const static FName SESSION_NAME = TEXT("SESSIONGAME");
+const static FName SERVER_NAME_KEY = TEXT("SERVERNAMEKEY");
 
 UPuzzlePlatformsGameInstance::UPuzzlePlatformsGameInstance(const FObjectInitializer &ObjectInitializer)
 {
@@ -69,8 +70,6 @@ void UPuzzlePlatformsGameInstance::RefreshServerList()
 
     UE_LOG(LogTemp, Warning, TEXT("Starting find session"));
 
-    // TODO: bIsLANMatch set to false for steam connect
-    SessionSearch->bIsLanQuery = true;
     SessionSearch->MaxSearchResults = 100;
     SessionSearch->QuerySettings.Set(SEARCH_PRESENCE, true, EOnlineComparisonOp::Equals);
     SessionInterface->FindSessions(0, SessionSearch.ToSharedRef());
@@ -116,8 +115,10 @@ void UPuzzlePlatformsGameInstance::LoadInGameMenu()
     InGameMenu->SetMenuInterface(this);
 }
 
-void UPuzzlePlatformsGameInstance::Host()
+void UPuzzlePlatformsGameInstance::Host(FString ServerName)
 {
+    DesiredServerName = ServerName;
+
     if (!SessionInterface.IsValid())
         return;
 
@@ -129,21 +130,12 @@ void UPuzzlePlatformsGameInstance::Host()
     }
     else
     {
-
         CreateSession();
     }
 }
 
 void UPuzzlePlatformsGameInstance::Join(uint32 Index)
 {
-    // TODO: Disable this block for steam connect
-    APlayerController *PlayerController = GetFirstLocalPlayerController();
-    if (!ensure(PlayerController != nullptr))
-        return;
-    PlayerController->ClientTravel("192.168.0.202", ETravelType::TRAVEL_Absolute);
-    return;
-    // TODO: Disable this block for steam connect
-
     if (!SessionInterface.IsValid())
         return;
 
@@ -159,10 +151,11 @@ void UPuzzlePlatformsGameInstance::CreateSession()
         return;
 
     FOnlineSessionSettings SessionSettings;
-    // TODO: bIsLANMatch set to false for steam connect
-    SessionSettings.bIsLANMatch = true;
+    SessionSettings.bIsLANMatch = IOnlineSubsystem::Get()->GetSubsystemName() == "NULL";
     SessionSettings.NumPublicConnections = 2;
     SessionSettings.bShouldAdvertise = true;
+    // Set both steaem and local can use
+    SessionSettings.Set(SERVER_NAME_KEY, DesiredServerName, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
     // Set these two option true for steam to work properly
     SessionSettings.bUsesPresence = true;
     SessionSettings.bUseLobbiesIfAvailable = true;
@@ -202,18 +195,26 @@ void UPuzzlePlatformsGameInstance::OnFindSessionsComplete(bool Success)
     if (!ensure(Menu != nullptr))
         return;
 
-    TArray<FString> ServerNames;
-    // TODO: Text Message
-    ServerNames.Add("Test Server 1");
-    ServerNames.Add("Test Server 2");
-    ServerNames.Add("Test Server 3");
+    TArray<FServerData> ServerDatas;
     TArray<FOnlineSessionSearchResult> Results = SessionSearch->SearchResults;
     for (const FOnlineSessionSearchResult &Result : Results)
     {
-        ServerNames.Add(Result.GetSessionIdStr());
+        FServerData ServerData;
+        // Get custom server name
+        if (!Result.Session.SessionSettings.Get(SERVER_NAME_KEY, ServerData.Name))
+        {
+            UE_LOG(LogTemp, Warning, TEXT("ServerData lost serverName!"));
+            ServerData.Name = Result.GetSessionIdStr();
+        }
+
+        ServerData.HostUserName = Result.Session.OwningUserName;
+        ServerData.MaxPlayers = Result.Session.SessionSettings.NumPublicConnections;
+        ServerData.CurrentPlayers = ServerData.MaxPlayers - Result.Session.NumOpenPublicConnections;
+
+        ServerDatas.Add(ServerData);
     }
 
-    Menu->SetServerList(ServerNames);
+    Menu->SetServerList(ServerDatas);
 }
 
 void UPuzzlePlatformsGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result)
