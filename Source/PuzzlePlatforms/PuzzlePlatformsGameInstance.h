@@ -22,12 +22,6 @@ public:
 
 	virtual void Init() override;
 
-	UFUNCTION(BlueprintCallable)
-	void LoadMainMenu();
-
-	UFUNCTION(BlueprintCallable)
-	void LoadInGameMenu();
-
 	UFUNCTION(Exec)
 	virtual void Host(FString ServerName) override;
 
@@ -37,6 +31,14 @@ public:
 	virtual void LoadMainMenuMap() override;
 
 	virtual void RefreshServerList() override;
+
+	UFUNCTION(BlueprintCallable)
+	void LoadMainMenu();
+
+	UFUNCTION(BlueprintCallable)
+	void LoadInGameMenu();
+
+	void StartSession();
 
 private:
 	TSubclassOf<UUserWidget> MainMenuClass;
@@ -55,4 +57,5 @@ private:
 	void OnFindSessionsComplete(bool Success);
 	void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
 	void OnDestroySessionComplete(FName SessionName, bool Success);
+	void OnNetworkFailure(UWorld* World, UNetDriver* NetDriver , ENetworkFailure::Type FailureType, const FString &ErrorString);
 };

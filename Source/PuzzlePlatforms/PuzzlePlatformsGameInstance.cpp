@@ -9,7 +9,6 @@
 #include "MenuSystem/MainMenu.h"
 #include "MenuSystem/MenuWidget.h"
 
-const static FName SESSION_NAME = TEXT("SESSIONGAME");
 const static FName SERVER_NAME_KEY = TEXT("SERVERNAMEKEY");
 
 UPuzzlePlatformsGameInstance::UPuzzlePlatformsGameInstance(const FObjectInitializer &ObjectInitializer)
@@ -55,6 +54,53 @@ void UPuzzlePlatformsGameInstance::Init()
     SessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &UPuzzlePlatformsGameInstance::OnFindSessionsComplete);
     SessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &UPuzzlePlatformsGameInstance::OnJoinSessionComplete);
     SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &UPuzzlePlatformsGameInstance::OnDestroySessionComplete);
+
+    if (GEngine == nullptr)
+    {
+        return;
+    }
+
+    GEngine->OnNetworkFailure().AddUObject(this, &UPuzzlePlatformsGameInstance::OnNetworkFailure);
+}
+
+void UPuzzlePlatformsGameInstance::Host(FString ServerName)
+{
+    DesiredServerName = ServerName;
+
+    if (!SessionInterface.IsValid())
+        return;
+
+    // If already exist then destroy
+    FNamedOnlineSession *ExistingSession = SessionInterface->GetNamedSession(NAME_GameSession);
+    if (ExistingSession)
+    {
+        SessionInterface->DestroySession(NAME_GameSession);
+    }
+    else
+    {
+        CreateSession();
+    }
+}
+
+void UPuzzlePlatformsGameInstance::Join(uint32 Index)
+{
+    if (!SessionInterface.IsValid())
+        return;
+
+    if (!SessionSearch.IsValid())
+        return;
+
+    SessionInterface->JoinSession(0, NAME_GameSession, SessionSearch->SearchResults[Index]);
+}
+
+void UPuzzlePlatformsGameInstance::LoadMainMenuMap()
+{
+    APlayerController *PlayerController = GetFirstLocalPlayerController();
+    if (!ensure(PlayerController != nullptr))
+        return;
+
+    // Use client travel command to leave current server.
+    PlayerController->ClientTravel("/Game/MenuSystem/MainMenu", ETravelType::TRAVEL_Absolute);
 }
 
 void UPuzzlePlatformsGameInstance::RefreshServerList()
@@ -73,16 +119,6 @@ void UPuzzlePlatformsGameInstance::RefreshServerList()
     SessionSearch->MaxSearchResults = 100;
     SessionSearch->QuerySettings.Set(SEARCH_PRESENCE, true, EOnlineComparisonOp::Equals);
     SessionInterface->FindSessions(0, SessionSearch.ToSharedRef());
-}
-
-void UPuzzlePlatformsGameInstance::LoadMainMenuMap()
-{
-    APlayerController *PlayerController = GetFirstLocalPlayerController();
-    if (!ensure(PlayerController != nullptr))
-        return;
-
-    // Use client travel command to leave current server.
-    PlayerController->ClientTravel("/Game/MenuSystem/MainMenu", ETravelType::TRAVEL_Absolute);
 }
 
 void UPuzzlePlatformsGameInstance::LoadMainMenu()
@@ -115,34 +151,12 @@ void UPuzzlePlatformsGameInstance::LoadInGameMenu()
     InGameMenu->SetMenuInterface(this);
 }
 
-void UPuzzlePlatformsGameInstance::Host(FString ServerName)
-{
-    DesiredServerName = ServerName;
-
-    if (!SessionInterface.IsValid())
-        return;
-
-    // If already exist then destroy
-    FNamedOnlineSession *ExistingSession = SessionInterface->GetNamedSession(SESSION_NAME);
-    if (ExistingSession)
-    {
-        SessionInterface->DestroySession(SESSION_NAME);
-    }
-    else
-    {
-        CreateSession();
-    }
-}
-
-void UPuzzlePlatformsGameInstance::Join(uint32 Index)
+void UPuzzlePlatformsGameInstance::StartSession()
 {
     if (!SessionInterface.IsValid())
         return;
 
-    if (!SessionSearch.IsValid())
-        return;
-
-    SessionInterface->JoinSession(0, SESSION_NAME, SessionSearch->SearchResults[Index]);
+    SessionInterface->StartSession(NAME_GameSession);
 }
 
 void UPuzzlePlatformsGameInstance::CreateSession()
@@ -152,7 +166,7 @@ void UPuzzlePlatformsGameInstance::CreateSession()
 
     FOnlineSessionSettings SessionSettings;
     SessionSettings.bIsLANMatch = IOnlineSubsystem::Get()->GetSubsystemName() == "NULL";
-    SessionSettings.NumPublicConnections = 3;
+    SessionSettings.NumPublicConnections = 5;
     SessionSettings.bShouldAdvertise = true;
     // Set both steaem and local can use
     SessionSettings.Set(SERVER_NAME_KEY, DesiredServerName, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
@@ -160,7 +174,7 @@ void UPuzzlePlatformsGameInstance::CreateSession()
     SessionSettings.bUsesPresence = true;
     SessionSettings.bUseLobbiesIfAvailable = true;
 
-    SessionInterface->CreateSession(0, SESSION_NAME, SessionSettings);
+    SessionInterface->CreateSession(0, NAME_GameSession, SessionSettings);
 }
 
 void UPuzzlePlatformsGameInstance::OnCreateSessionComplete(FName SessionName, bool Success)
@@ -257,4 +271,9 @@ void UPuzzlePlatformsGameInstance::OnDestroySessionComplete(FName SessionName, b
 
     // Recreate session after successfully destroy it
     CreateSession();
+}
+
+void UPuzzlePlatformsGameInstance::OnNetworkFailure(UWorld *World, UNetDriver *NetDriver, ENetworkFailure::Type FailureType, const FString &ErrorString)
+{
+    LoadMainMenuMap();
 }
